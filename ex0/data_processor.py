@@ -1,6 +1,7 @@
 import abc
 import typing
 
+
 class DataProcessor(abc.ABC):
     def __init__(self) -> None:
         self._data: list[tuple[int, str]] = []
@@ -15,7 +16,7 @@ class DataProcessor(abc.ABC):
         ...
 
     def _store(self, value: str) -> None:
-        self._data.append((self._total_processed, str(value)))
+        self._data.append((self._total_processed, value))
         self._total_processed += 1
 
     def output(self) -> tuple[int, str]:
@@ -30,7 +31,10 @@ class NumericProcessor(DataProcessor):
         if self._is_number(data):
             return True
         if isinstance(data, list):
-            return all(self._is_number(value) for value in data)
+            for value in data:
+                if not self._is_number(value):
+                    return False
+                return True
         return False
 
     def ingest(self, data: int | float | list[int | float]) -> None:
@@ -49,7 +53,10 @@ class TextProcessor(DataProcessor):
         if isinstance(data, str):
             return True
         if isinstance(data, list):
-            return all(isinstance(value, str) for value in data)
+            for value in data:
+                if not isinstance(value, str):
+                    return False
+                return True
         return False
 
     def ingest(self, data: str | list[str]) -> None:
@@ -65,15 +72,16 @@ class TextProcessor(DataProcessor):
 
 class LogProcessor(DataProcessor):
     def _is_valid_dict(self, value: typing.Any) -> bool:
-        return (
-            isinstance(value, dict)
-            and isinstance(value.get("log_level"), str)
-            and isinstance(value.get("log_message"), str)
-            and all(
-                isinstance(key, str) and isinstance(val, str)
-                for key, val in value.items()
-            )
-        )
+        if not isinstance(value, dict):
+            return False
+        if not isinstance(value.get("log_level"), str):
+            return False
+        if not isinstance(value.get("log_message"), str):
+            return False
+        for key, val in value.items():
+            if not isinstance(key, str) or not isinstance(val, str):
+                return False
+        return True
 
     def _format_log(self, log: dict[str, str]) -> str:
         return f"{log['log_level']}: {log['log_message']}"
@@ -82,7 +90,10 @@ class LogProcessor(DataProcessor):
         if self._is_valid_dict(data):
             return True
         if isinstance(data, list):
-            return all(self._is_valid_dict(value) for value in data)
+            for value in data:
+                if not self._is_valid_dict(value):
+                    return False
+            return True
         return False
 
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
